@@ -2,17 +2,21 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
+import os
 
 st.set_page_config(page_title="AI Evidence Graph – Weight-Loss Coaching Insights", layout="wide")
 
 # --- Load & prepare data ---
 @st.cache_data
 def load_data():
-    try:
-        df = pd.read_csv("weight_loss_dashboard/patients.csv")  # adjust path if your CSV is elsewhere
-    except FileNotFoundError:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(base_dir, "patients.csv")
+
+    if not os.path.exists(csv_path):
         st.error("❌ patients.csv not found. Please ensure the file is in the same folder as this app.")
         st.stop()
+
+    df = pd.read_csv(csv_path)
 
     if "height" not in df.columns or "weight" not in df.columns:
         st.error("❌ Dataset missing required columns: 'height' or 'weight'.")
@@ -46,27 +50,20 @@ for uid, g in df.groupby("user_id"):
             streak = 0
 
     avg_deficit = g["daily_deficit_kcal"].mean() if "daily_deficit_kcal" in g.columns else np.nan
-    low_deficit = avg_deficit < 500 if not np.isnan(avg_deficit) else False
     total_loss = g["weight"].iloc[0] - g["weight"].iloc[-1]
     achieved_5kg = total_loss >= 5
 
     flags.append({
         "user_id": uid,
         "plateau_3w": plateau_3w,
-        "low_deficit": low_deficit,
-        "at_risk": plateau_3w or low_deficit,
         "total_loss": total_loss,
         "avg_deficit": avg_deficit,
         "achieved_5kg": achieved_5kg
     })
 
-# --- Convert to DataFrame safely ---
 if len(flags) == 0:
     st.warning("⚠️ No user data detected — the dataset might be empty or missing key fields.")
-    flags = pd.DataFrame(columns=[
-        "user_id", "plateau_3w", "low_deficit",
-        "at_risk", "total_loss", "avg_deficit", "achieved_5kg"
-    ])
+    flags = pd.DataFrame(columns=["user_id", "plateau_3w", "total_loss", "avg_deficit", "achieved_5kg"])
 else:
     flags = pd.DataFrame(flags)
 
@@ -75,8 +72,7 @@ if "user_id" not in flags.columns:
     st.error("⚠️ Internal error: Missing 'user_id' column in flags DataFrame. Please check preprocessing logic.")
     st.stop()
 else:
-    df = df.merge(flags[["user_id", "plateau_3w", "low_deficit", "at_risk"]],
-                  on="user_id", how="left")
+    df = df.merge(flags[["user_id", "plateau_3w"]], on="user_id", how="left")
 
 st.success("✅ Data loaded and merged successfully!")
 
@@ -85,22 +81,20 @@ n_users = df["user_id"].nunique()
 achieved_5kg = flags["achieved_5kg"].sum()
 plateau_users = flags["plateau_3w"].sum()
 avg_daily_def = flags["avg_deficit"].mean()
-at_risk_count = flags["at_risk"].sum()
 
 st.title("🏋️‍♀️ AI Evidence Graph – Weight-Loss Coaching Insights")
 
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4 = st.columns(4)
 c1.metric("Users", int(n_users))
 c2.metric("≥5 kg loss (8w)", int(achieved_5kg))
 c3.metric("Users plateaued ≥3w", plateau_users)
 if not pd.isna(avg_daily_def):
     c4.metric("Mean deficit (/day)", f"{avg_daily_def:,.0f} kcal")
-c5.metric("At-Risk Users", int(at_risk_count))
 
 st.divider()
 
-# --- At-Risk User Summary ---
-st.subheader("🚨 At-Risk User Summary")
+# --- Plateaued User Summary ---
+st.subheader("🚨 Plateaued User Summary")
 user_summary = (
     df.sort_values("week_no")
       .groupby("user_id")
@@ -114,20 +108,19 @@ user_summary = (
       )
       .reset_index()
 )
-summary_with_flags = user_summary.merge(flags[["user_id","plateau_3w","low_deficit","at_risk"]], on="user_id", how="left")
-at_risk_df = summary_with_flags[summary_with_flags["at_risk"]].copy()
+summary_with_flags = user_summary.merge(flags[["user_id","plateau_3w"]], on="user_id", how="left")
+plateau_df = summary_with_flags[summary_with_flags["plateau_3w"]].copy()
 
-if at_risk_df.empty:
-    st.info("🎉 Great news! No users currently flagged as at-risk.")
+if plateau_df.empty:
+    st.info("🎉 Great news! No users currently plateaued.")
 else:
     st.dataframe(
-        at_risk_df.rename(columns={
+        plateau_df.rename(columns={
             "user_id":"User",
             "current_weight":"Current Weight (kg)",
             "target_weight":"Target Weight (kg)",
             "avg_deficit_per_day":"Avg Deficit (/day, kcal)",
-            "plateau_3w":"Plateau ≥3w",
-            "low_deficit":"Low Deficit (<500 kcal/day)"
+            "plateau_3w":"Plateau ≥3w"
         }).style.format({
             "Current Weight (kg)":"{:.1f}",
             "Target Weight (kg)":"{:.1f}",
@@ -168,9 +161,7 @@ with tab3:
     msg = []
     if user_flag["plateau_3w"]:
         msg.append("Plateau ≥3 weeks – vary workout intensity or adjust calorie plan.")
-    if user_flag["low_deficit"]:
-        msg.append("Average deficit <500 kcal/day – consider tighter nutrition control.")
-    if not msg:
+    else:
         msg.append("On track – continue current plan and monitor progress weekly.")
     st.success(" ".join(msg))
 
@@ -190,13 +181,34 @@ st.scatter_chart(
 corr = corr_df["weekly_deficit_kcal"].corr(corr_df["weight_change"])
 st.caption(f"Correlation = {corr:.2f} (expect negative: higher deficit → greater weight loss)")
 
+# --- Weekly Calorie Deficit vs Target Loss ---
+st.divider()
+st.subheader("🔥 Weekly Calorie Deficit vs Target Loss")
+
+weekly_summary = (
+    df.groupby("week_no")
+      .agg(
+          avg_deficit=("daily_deficit_kcal", "mean"),
+          avg_weight_change=("weight_change", "mean")
+      )
+      .reset_index()
+)
+weekly_summary["avg_weight_change"] = weekly_summary["avg_weight_change"].abs()
+weekly_summary["target_loss_per_week"] = 10 / 8
+
+st.line_chart(
+    weekly_summary.set_index("week_no")[["avg_deficit", "avg_weight_change"]],
+    height=350
+)
+
+st.caption("Average weekly deficit vs achieved loss. Target = 1.25 kg/week.")
+
 # --- Export summary ---
 summary_json = {
     "summary": f"Out of {n_users} users, {achieved_5kg} achieved ≥5 kg loss in 8 weeks.",
     "insights": [
         f"Avg daily deficit = {avg_daily_def:.0f} kcal",
-        f"{plateau_users} plateaued ≥3 weeks",
-        f"{at_risk_count} at-risk users"
+        f"{plateau_users} plateaued ≥3 weeks"
     ]
 }
 st.download_button("📥 Download Insights JSON", data=str(summary_json), file_name="summary.json")
