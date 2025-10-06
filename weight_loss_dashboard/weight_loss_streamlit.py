@@ -9,7 +9,7 @@ st.set_page_config(page_title="AI Evidence Graph – Weight-Loss Coaching Insigh
 @st.cache_data
 def load_data():
     try:
-        df = pd.read_csv("patients.csv")  # adjust path if your CSV is elsewhere
+        df = pd.read_csv("weight_loss_dashboard/patients.csv")  # adjust path if your CSV is elsewhere
     except FileNotFoundError:
         st.error("❌ patients.csv not found. Please ensure the file is in the same folder as this app.")
         st.stop()
