@@ -1,90 +1,63 @@
 # 🧠 AI Evidence Graph – Weight-Loss Coaching Insights
 
-### 🎯 Goal
-An interactive prototype dashboard that visualises **evidence-based coaching data** for users targeting a **10 kg reduction over 8 weeks**.  
-The dashboard identifies behavioural patterns, calorie trends, and progress plateaus to support data-driven health coaching decisions.
+## Goal  
+Prototype dashboard to visualise evidence-based coaching data for users targeting **–10 kg** over 8 weeks.
 
-### 🛠️ Tech Stack
-**Python · Pandas · Streamlit · scikit-learn (Linear Regression)**  
-Deployed on **Streamlit Community Cloud**.
+## Tech  
+**Python · Pandas · Streamlit · scikit-learn (Linear Regression)**
 
 ---
 
-## 📊 Dataset Overview
+## 📊 Dataset
 **File:** `patients.csv`  
-Each record represents a weekly data point for one of 50 users over 8 weeks.
+**Columns:**  
+`user_id, age, sex, height, weight, target_weight, activity_level, calorie_intake, workout_mins, week_no, weight_change`
 
-| Column | Description |
-|:--------|:-------------|
-| `user_id` | Unique participant ID |
-| `age`, `sex`, `height` | Demographic / biometric data |
-| `weight`, `target_weight` | Actual vs goal weight (kg) |
-| `activity_level` | Sedentary / Light / Moderate / Active |
-| `calorie_intake` | Average daily energy intake (kcal) |
-| `workout_mins` | Weekly exercise duration (minutes) |
-| `week_no` | Week index (1–8) |
-| `weight_change` | Weight delta vs previous week (kg) |
+Each user contributes 8 weekly records.  
 
-**Derived fields**
-- **BMI** = `weight / (height_m²)`  
-- **Daily deficit (kcal)** ≈ `(2400 − calorie_intake) + (workout_mins × 5 / 7)`  
-- **Plateau flag** = ≥ 3 consecutive weeks with `|Δweight| < 0.1 kg`  
+**Derived metrics:**  
+- **BMI:** `weight_kg / (height_m^2)`  
+- **Weekly calorie deficit:** `7 × (TDEE – calorie_intake)`  
+- **TDEE (Total Daily Energy Expenditure):** estimated via activity multiplier  
+  *(sedentary=1.2, light=1.375, moderate=1.55, active=1.725)*  
+- **At-risk users:** plateau **≥3 weeks** (|Δweight| < 0.2 kg)  
+  or mean daily deficit < **500 kcal**
 
 ---
 
-## 🎯 KPIs Displayed
-| KPI | Definition |
-|:----|:------------|
-| **Users** | Total participants in dataset |
-| **≥ 5 kg loss (8 w)** | Users whose final–initial weight ≥ 5 kg |
-| **Users plateaued ≥ 3 w** | Users showing no progress for ≥ 3 weeks |
-| **Mean Deficit (/day)** | Average daily calorie deficit across users |
-
-> *For this sample dataset, no user achieved ≥ 5 kg loss or plateaued ≥ 3 weeks — consistent with the realistic synthetic data distribution.*
+## 🎯 KPIs  
+- **Total users**  
+- **Users with ≥ 5 kg loss** in 8 weeks  
+- **Users plateaued ≥ 3 weeks**  
+- **Mean daily deficit** across all users  
 
 ---
 
-## 📈 Visuals & Interaction
+## 📈 Visuals & Tabs  
+1. **BMI & Weight Trend:** per-user line chart showing progress vs target.  
+2. **Weekly Calorie Deficit & Target Loss:** displays weekly calorie deficit and expected loss values directly from dataset.  
+3. **Forecast:** one-step-ahead prediction using a simple **Linear Regression** model.  
+4. **Coach Suggestion:** rule-based text guidance (e.g., “Increase activity” or “Good progress!”).  
 
-The dashboard provides four tabs to toggle between user-level insights:
-
-1. **📉 BMI & Weight Trend**  
-   - Displays individual trajectories across 8 weeks  
-   - Highlights weekly weight change alongside BMI evolution  
-
-2. **🔥 Weekly Calorie Deficit & Target Loss**  
-   - Computes weekly mean calorie deficit and weight loss per week  
-   - Compares to a fixed target of 1.25 kg/week (10 kg ÷ 8)  
-   - Displays as a clean numeric summary table and overall averages  
-
-3. **📈 Forecast**  
-   - Uses **Linear Regression** to predict next-week weight based on previous 7 weeks  
-   - Provides one-step-ahead forecast for trend continuation  
-
-4. **💬 Coach Suggestion**  
-   - Rule-based recommendations depending on plateau detection or consistent progress  
-   - Example: *“On track – maintain current plan” or “Possible plateau – review diet/exercise balance.”*
+Users can toggle between these tabs and select individual users from a sidebar filter.
 
 ---
 
-## 🤖 Model & Analytical Logic
-- **Aggregation:** Weekly averages by `user_id` and `week_no`  
-- **Trend Analysis:** Weight, BMI, and deficit evolution  
-- **Correlation Check:** Scatter of `daily_deficit_kcal` vs `weight_change` to confirm expected negative relationship  
-- **Forecast Model:** `LinearRegression()` fitted to predict Week 8 from Weeks 1–7 per user  
-- **Rule Engine:** Plateau & progress rules generate text recommendations  
+## 🤖 Model Logic  
+- **Linear Regression** trained on `week_no` vs `weight` for each user.  
+- Produces a **forecasted next-week weight** to visualise potential outcomes.  
+- Model re-fits dynamically when a different user is selected.
 
 ---
 
-## 📦 Export Summary
-When exported as JSON or CSV, the dashboard produces a concise report for integration with AVA:
-
+## 📦 Export Summary  
+A JSON-style summary (for optional API/AI integration) includes:  
 ```json
 {
-  "summary": "Out of 50 users, 0 achieved ≥5 kg loss in 8 weeks.",
+  "summary": "Out of <N> users, <K> achieved ≥5 kg loss in 8 weeks.",
   "insights": [
-    "Average deficit ≈ 620 kcal/day",
-    "0 users plateaued ≥3 weeks"
+    "Mean deficit ≈ <X> kcal/day",
+    "<P> users plateaued ≥3 weeks"
   ],
-  "ai_summary": "Most users show gradual, consistent progress with minor weekly fluctuations."
+  "ai_summary": "(optional, if OPENAI_API_KEY set)"
 }
