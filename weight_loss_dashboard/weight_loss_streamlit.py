@@ -10,10 +10,10 @@ st.set_page_config(page_title="AI Evidence Graph – Weight-Loss Coaching Insigh
 @st.cache_data
 def load_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, "patients.csv")
+    csv_path = os.path.join(base_dir, "patients_2.csv")
 
     if not os.path.exists(csv_path):
-        st.error("❌ patients.csv not found. Please ensure the file is in the same folder as this app.")
+        st.error("❌ patients_2.csv not found. Please ensure the file is in the same folder as this app.")
         st.stop()
 
     df = pd.read_csv(csv_path)
@@ -32,7 +32,7 @@ df = load_data()
 flags = []
 
 if "user_id" not in df.columns:
-    st.error("❌ Dataset error: 'user_id' column missing from patients.csv.")
+    st.error("❌ Dataset error: 'user_id' column missing from patients_2.csv.")
     st.stop()
 
 for uid, g in df.groupby("user_id"):
