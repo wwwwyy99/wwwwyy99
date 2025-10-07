@@ -51,14 +51,14 @@ for uid, g in df.groupby("user_id"):
 
     avg_deficit = g["daily_deficit_kcal"].mean() if "daily_deficit_kcal" in g.columns else np.nan
     total_loss = g["weight"].iloc[0] - g["weight"].iloc[-1]
-    achieved_5kg = total_loss >= 5
+    achieved_2kg = total_loss >= 2
 
     flags.append({
         "user_id": uid,
         "plateau_3w": plateau_3w,
         "total_loss": total_loss,
         "avg_deficit": avg_deficit,
-        "achieved_5kg": achieved_5kg
+        "achieved_2kg": achieved_2kg
     })
 
 flags = pd.DataFrame(flags)
@@ -68,13 +68,13 @@ st.title("🏋️‍♀️ AI Evidence Graph – Weight-Loss Coaching Insights")
 
 # --- KPIs ---
 n_users = df["user_id"].nunique()
-achieved_5kg = flags["achieved_5kg"].sum()
+achieved_2kg = flags["achieved_2kg"].sum()
 plateau_users = flags["plateau_3w"].sum()
 avg_daily_def = flags["avg_deficit"].mean()
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Users", int(n_users))
-c2.metric("≥5 kg loss (8w)", int(achieved_5kg))
+c2.metric("≥2 kg loss (8w)", int(achieved_2kg))
 c3.metric("Users plateaued ≥3w", plateau_users)
 if not pd.isna(avg_daily_def):
     c4.metric("Mean deficit (/day)", f"{avg_daily_def:,.0f} kcal")
