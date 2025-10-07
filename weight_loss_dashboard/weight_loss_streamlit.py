@@ -198,8 +198,7 @@ with tab4:
     st.subheader("🤖 AI Coaching Advice")
 
     import openai, json
-
-    api_key = st.secrets.get("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") or os.getenv("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")
+    api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
     if not api_key:
         st.warning("⚠️ Add your OpenAI API key in Streamlit Secrets or environment variables to enable AI insights.")
     else:
