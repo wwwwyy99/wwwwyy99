@@ -160,21 +160,46 @@ with tab4:
         msg.append("✅ On track – continue current plan and monitor progress weekly.")
     st.success(" ".join(msg))
 
-st.divider()
+# --- Overall Correlation (Plotly visualisation) ---
+import plotly.express as px
 
-# --- Overall Correlation ---
 st.subheader("📊 Overall: Calorie Deficit vs Weight Change Correlation")
+
 df["weekly_deficit_kcal"] = df["daily_deficit_kcal"] * 7
+df["weekly_deficit_kcal"] = pd.to_numeric(df["weekly_deficit_kcal"], errors="coerce")
+df["weight_change"] = pd.to_numeric(df["weight_change"], errors="coerce")
+
 corr_df = df.dropna(subset=["weekly_deficit_kcal", "weight_change"])
-st.scatter_chart(
-    corr_df.rename(columns={
-        "weekly_deficit_kcal": "Weekly Deficit (kcal)",
-        "weight_change": "Weekly Weight Δ (kg)"
-    })[["Weekly Deficit (kcal)", "Weekly Weight Δ (kg)"]],
-    height=400
-)
-corr = corr_df["weekly_deficit_kcal"].corr(corr_df["weight_change"])
-st.caption(f"Correlation = {corr:.2f} (expect negative: higher deficit → greater weight loss)")
+
+if not corr_df.empty:
+    corr_value = corr_df["weekly_deficit_kcal"].corr(corr_df["weight_change"])
+
+    fig = px.scatter(
+        corr_df,
+        x="weekly_deficit_kcal",
+        y="weight_change",
+        color="activity_level",
+        hover_data=["user_id", "week_no"],
+        trendline="ols",
+        title=f"Weekly Calorie Deficit vs Weight Change (Correlation = {corr_value:.2f})",
+        labels={
+            "weekly_deficit_kcal": "Weekly Calorie Deficit (kcal)",
+            "weight_change": "Weekly Weight Change (kg)"
+        }
+    )
+
+    fig.update_traces(marker=dict(size=7, opacity=0.7))
+    fig.update_layout(height=500, title_x=0.2)
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.caption(
+        "💡 A negative correlation indicates that users with higher calorie deficits "
+        "tend to lose more weight week to week."
+    )
+else:
+    st.warning("No valid data available for correlation plot.")
+
+st.divider()
 
 # --- Export summary ---
 summary_json = {
