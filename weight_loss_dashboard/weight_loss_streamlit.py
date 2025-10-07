@@ -107,7 +107,7 @@ with tab1:
         alt.Chart(user_data)
         .mark_line(point=True, color="#4C78A8", size=3)
         .encode(
-            x=alt.X("week_no:O", title="Week Number", axis=alt.Axis(labelAngle=45)),
+            x=alt.X("week_no:O", title="Week Number", axis=alt.Axis(labelAngle=0)),
             y=alt.Y("BMI:Q", title="BMI", scale=alt.Scale(domain=[15, user_data["BMI"].max() + 2])),
             tooltip=["week_no", "BMI"]
         )
@@ -119,7 +119,7 @@ with tab1:
         alt.Chart(user_data)
         .mark_line(point=True, color="#E45756", size=3)
         .encode(
-            x=alt.X("week_no:O", title="Week Number", axis=alt.Axis(labelAngle=45)),
+            x=alt.X("week_no:O", title="Week Number", axis=alt.Axis(labelAngle=0)),
             y=alt.Y("weight:Q", title="Weight (kg)", scale=alt.Scale(domain=[40, user_data["weight"].max() + 2])),
             tooltip=["week_no", "weight"]
         )
