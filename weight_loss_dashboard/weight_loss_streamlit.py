@@ -184,10 +184,7 @@ with tab3:
 with tab4:
     st.subheader(f"Coach Suggestion for User {selected_user}")
 
-# --- TAB 4: Coach Suggestion (AI + Rule-based) ---
-with tab4:
-    st.subheader(f"Coach Suggestion for User {selected_user}")
-
+    # --- Rule-based feedback ---
     msg = []
     if user_flag["plateau_3w"]:
         msg.append("⚠️ Plateau ≥3 weeks – vary workout intensity or adjust calorie plan.")
@@ -197,8 +194,8 @@ with tab4:
 
     st.divider()
 
-    # --- AI Coaching Summary (Optional) ---
-    st.subheader("🤖 AI Summary (Powered by OpenAI)")
+    # --- AI Coaching Summary (OpenAI Integration) ---
+    st.subheader("🤖 AI Coaching Advice")
 
     import openai, json
 
@@ -208,32 +205,38 @@ with tab4:
     else:
         openai.api_key = api_key
 
-        # Prepare compact summary data to feed the model
+        # Prepare compact user data summary for the model
         user_summary = {
             "user_id": int(selected_user),
             "total_loss": float(user_flag["total_loss"]),
             "plateau_3w": bool(user_flag["plateau_3w"]),
             "avg_deficit": float(user_flag["avg_deficit"]),
             "bmi_trend": user_data["BMI"].tolist(),
-            "weight_trend": user_data["weight"].tolist()
+            "weight_trend": user_data["weight"].tolist(),
+            "activity_level": user_data["activity_level"].iloc[0],
+            "age": int(user_data["age"].iloc[0]),
+            "sex": user_data["sex"].iloc[0],
         }
 
+        # --- Your prompt here ---
         prompt = f"""
-        You are a digital health coach. Summarise this 8-week weight loss progress:
+        Imagine you are a certified health coach. Give personalised advice to this user based on their 8-week weight loss data.
+
+        Here is their summary data:
         {json.dumps(user_summary, indent=2)}
 
-        In 2-3 sentences, describe:
-        - whether the user met expectations (target ≈ 10 kg over 8 weeks),
-        - if they experienced a plateau,
-        - and one specific next action they can take.
-        Keep it concise, motivational, and easy to read.
+        Please include:
+        - A short summary of their performance (mention weight loss trend and calorie deficit)
+        - Whether they are on track toward their 10 kg goal
+        - Specific advice for improvement or next steps
+        - Use a friendly, motivational tone (2–3 sentences max)
         """
 
         try:
             from openai import OpenAI
             client = OpenAI(api_key=api_key)
 
-            with st.spinner("Generating AI coaching summary..."):
+            with st.spinner("Generating AI coaching advice..."):
                 response = client.responses.create(
                     model="gpt-4o-mini",
                     input=prompt,
@@ -243,7 +246,6 @@ with tab4:
                 st.info(ai_summary)
         except Exception as e:
             st.error(f"AI summary failed: {e}")
-
 
 st.divider()
 
