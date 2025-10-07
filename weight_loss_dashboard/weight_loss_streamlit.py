@@ -214,7 +214,7 @@ trend_user = model.coef_[0]
 st.caption(f"User {selected_user} trend ≈ {trend_user:.2f} kg/week (negative = weight loss).")
 # --- Export summary ---
 summary_json = {
-    "summary": f"Out of {n_users} users, {achieved_5kg} achieved ≥5 kg loss in 8 weeks.",
+    "summary": f"Out of {n_users} users, {achieved_2kg} achieved ≥2 kg loss in 8 weeks.",
     "insights": [
         f"Avg daily deficit = {avg_daily_def:.0f} kcal",
         f"{plateau_users} plateaued ≥3 weeks"
