@@ -174,37 +174,36 @@ group_avg = (
     .rename(columns={"weight": "avg_weight"})
 )
 
-# Merge group average with user data
+# Selected user's weekly trend
 user_trend = df[df["user_id"] == selected_user][["week_no", "weight"]]
 
-# Create Altair line for overall average
+# Create average trend line (dashed)
 avg_line = (
     alt.Chart(group_avg)
     .mark_line(color="#888", strokeDash=[5, 3], size=2)
     .encode(
-        x=alt.X("week_no:O", title="Week Number"),
+        x=alt.X("week_no:O", title="Week Number", axis=alt.Axis(labelAngle=0)),
         y=alt.Y("avg_weight:Q", title="Weight (kg)", scale=alt.Scale(zero=False)),
         tooltip=["week_no", "avg_weight"]
     )
 )
 
-# Create line for selected user
+# Create user trend line (solid)
 user_line = (
     alt.Chart(user_trend)
     .mark_line(point=True, color="#E45756", size=3)
     .encode(
-        x=alt.X("week_no:O"),
+        x=alt.X("week_no:O", axis=alt.Axis(labelAngle=0)),
         y=alt.Y("weight:Q"),
         tooltip=["week_no", "weight"]
     )
 )
 
-# Combine both charts
+# Combine charts
 combined = (avg_line + user_line).properties(height=400)
-
 st.altair_chart(combined, use_container_width=True)
 
-# Optional regression trendline for user
+# Linear regression slope for user
 from sklearn.linear_model import LinearRegression
 
 X_user = user_trend[["week_no"]]
@@ -213,7 +212,6 @@ model = LinearRegression().fit(X_user, y_user)
 trend_user = model.coef_[0]
 
 st.caption(f"User {selected_user} trend ≈ {trend_user:.2f} kg/week (negative = weight loss).")
-
 # --- Export summary ---
 summary_json = {
     "summary": f"Out of {n_users} users, {achieved_5kg} achieved ≥5 kg loss in 8 weeks.",
