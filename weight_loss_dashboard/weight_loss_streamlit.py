@@ -184,14 +184,66 @@ with tab3:
 with tab4:
     st.subheader(f"Coach Suggestion for User {selected_user}")
 
-import openai
-openai.api_key = "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"
+# --- TAB 4: Coach Suggestion (AI + Rule-based) ---
+with tab4:
+    st.subheader(f"Coach Suggestion for User {selected_user}")
 
-response = openai.chat.completions.create(
-    model="gpt-5-turbo",
-    messages=[{"role": "user", "content": "Hello!"}]
-)
-print(response.choices[0].message.content)
+    msg = []
+    if user_flag["plateau_3w"]:
+        msg.append("⚠️ Plateau ≥3 weeks – vary workout intensity or adjust calorie plan.")
+    else:
+        msg.append("✅ On track – continue current plan and monitor progress weekly.")
+    st.success(" ".join(msg))
+
+    st.divider()
+
+    # --- AI Coaching Summary (Optional) ---
+    st.subheader("🤖 AI Summary (Powered by OpenAI)")
+
+    import openai, json
+
+    api_key = st.secrets.get("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") or os.getenv("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")
+    if not api_key:
+        st.warning("⚠️ Add your OpenAI API key in Streamlit Secrets or environment variables to enable AI insights.")
+    else:
+        openai.api_key = api_key
+
+        # Prepare compact summary data to feed the model
+        user_summary = {
+            "user_id": int(selected_user),
+            "total_loss": float(user_flag["total_loss"]),
+            "plateau_3w": bool(user_flag["plateau_3w"]),
+            "avg_deficit": float(user_flag["avg_deficit"]),
+            "bmi_trend": user_data["BMI"].tolist(),
+            "weight_trend": user_data["weight"].tolist()
+        }
+
+        prompt = f"""
+        You are a digital health coach. Summarise this 8-week weight loss progress:
+        {json.dumps(user_summary, indent=2)}
+
+        In 2-3 sentences, describe:
+        - whether the user met expectations (target ≈ 10 kg over 8 weeks),
+        - if they experienced a plateau,
+        - and one specific next action they can take.
+        Keep it concise, motivational, and easy to read.
+        """
+
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+
+            with st.spinner("Generating AI coaching summary..."):
+                response = client.responses.create(
+                    model="gpt-4o-mini",
+                    input=prompt,
+                    temperature=0.7,
+                )
+                ai_summary = response.output[0].content[0].text
+                st.info(ai_summary)
+        except Exception as e:
+            st.error(f"AI summary failed: {e}")
+
 
 st.divider()
 
