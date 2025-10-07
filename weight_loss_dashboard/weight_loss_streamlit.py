@@ -164,32 +164,40 @@ with tab4:
 
 st.divider()
 
-# --- Overall Correlation (improved with Altair) ---
+# --- Overall Correlation (Altair visualisation) ---
 st.subheader("📊 Overall: Calorie Deficit vs Weight Change Correlation")
 
 df["weekly_deficit_kcal"] = df["daily_deficit_kcal"] * 7
+
+# Ensure correct numeric types
+df["weekly_deficit_kcal"] = pd.to_numeric(df["weekly_deficit_kcal"], errors="coerce")
+df["weight_change"] = pd.to_numeric(df["weight_change"], errors="coerce")
+
 corr_df = df.dropna(subset=["weekly_deficit_kcal", "weight_change"])
 
-corr_value = corr_df["weekly_deficit_kcal"].corr(corr_df["weight_change"])
+if not corr_df.empty:
+    corr_value = corr_df["weekly_deficit_kcal"].corr(corr_df["weight_change"])
 
-scatter = (
-    alt.Chart(corr_df)
-    .mark_circle(size=70, opacity=0.6, color="steelblue")
-    .encode(
-        x=alt.X("weekly_deficit_kcal", title="Weekly Calorie Deficit (kcal)"),
-        y=alt.Y("weight_change", title="Weekly Weight Change (kg)"),
-        tooltip=["user_id", "week_no", "weekly_deficit_kcal", "weight_change"]
+    scatter = (
+        alt.Chart(corr_df)
+        .mark_circle(size=70, opacity=0.6, color="steelblue")
+        .encode(
+            x=alt.X("weekly_deficit_kcal:Q", title="Weekly Calorie Deficit (kcal)"),
+            y=alt.Y("weight_change:Q", title="Weekly Weight Change (kg)"),
+            tooltip=["user_id:O", "week_no:O", "weekly_deficit_kcal:Q", "weight_change:Q"]
+        )
     )
-)
 
-trend = (
-    alt.Chart(corr_df)
-    .transform_regression("weekly_deficit_kcal", "weight_change")
-    .mark_line(color="red", strokeDash=[5, 3])
-)
+    trend = (
+        alt.Chart(corr_df)
+        .transform_regression("weekly_deficit_kcal", "weight_change")
+        .mark_line(color="red", strokeDash=[5, 3])
+    )
 
-st.altair_chart(scatter + trend, use_container_width=True)
-st.caption(f"Correlation = {corr_value:.2f} (expected negative: higher deficit → greater weight loss)")
+    st.altair_chart(scatter + trend, use_container_width=True)
+    st.caption(f"Correlation = {corr_value:.2f} (expected negative: higher deficit → greater weight loss)")
+else:
+    st.warning("No valid data available for correlation plot.")
 
 # --- Export summary ---
 summary_json = {
