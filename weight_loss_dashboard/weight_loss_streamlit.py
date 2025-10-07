@@ -162,19 +162,57 @@ with tab4:
 
 st.divider()
 
-# --- Overall Correlation ---
-st.subheader("📊 Overall: Calorie Deficit vs Weight Change Correlation")
-df["weekly_deficit_kcal"] = df["daily_deficit_kcal"] * 7
-corr_df = df.dropna(subset=["weekly_deficit_kcal", "weight_change"])
-st.scatter_chart(
-    corr_df.rename(columns={
-        "weekly_deficit_kcal": "Weekly Deficit (kcal)",
-        "weight_change": "Weekly Weight Δ (kg)"
-    })[["Weekly Deficit (kcal)", "Weekly Weight Δ (kg)"]],
-    height=400
+# --- Overall Comparison: Selected User vs All Users ---
+st.subheader("📊 Overall: Weight Loss Progress vs Average Trend")
+
+import altair as alt
+
+# Compute group average weight per week
+group_avg = (
+    df.groupby("week_no", as_index=False)["weight"]
+    .mean()
+    .rename(columns={"weight": "avg_weight"})
 )
-corr = corr_df["weekly_deficit_kcal"].corr(corr_df["weight_change"])
-st.caption(f"Correlation = {corr:.2f} (expect negative: higher deficit → greater weight loss)")
+
+# Merge group average with user data
+user_trend = df[df["user_id"] == selected_user][["week_no", "weight"]]
+
+# Create Altair line for overall average
+avg_line = (
+    alt.Chart(group_avg)
+    .mark_line(color="#888", strokeDash=[5, 3], size=2)
+    .encode(
+        x=alt.X("week_no:O", title="Week Number"),
+        y=alt.Y("avg_weight:Q", title="Weight (kg)", scale=alt.Scale(zero=False)),
+        tooltip=["week_no", "avg_weight"]
+    )
+)
+
+# Create line for selected user
+user_line = (
+    alt.Chart(user_trend)
+    .mark_line(point=True, color="#E45756", size=3)
+    .encode(
+        x=alt.X("week_no:O"),
+        y=alt.Y("weight:Q"),
+        tooltip=["week_no", "weight"]
+    )
+)
+
+# Combine both charts
+combined = (avg_line + user_line).properties(height=400)
+
+st.altair_chart(combined, use_container_width=True)
+
+# Optional regression trendline for user
+from sklearn.linear_model import LinearRegression
+
+X_user = user_trend[["week_no"]]
+y_user = user_trend["weight"]
+model = LinearRegression().fit(X_user, y_user)
+trend_user = model.coef_[0]
+
+st.caption(f"User {selected_user} trend ≈ {trend_user:.2f} kg/week (negative = weight loss).")
 
 # --- Export summary ---
 summary_json = {
