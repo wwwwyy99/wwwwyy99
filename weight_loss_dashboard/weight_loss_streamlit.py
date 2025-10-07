@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
-import altair as alt
 import os
 
 st.set_page_config(page_title="AI Evidence Graph – Weight-Loss Coaching Insights", layout="wide")
@@ -23,7 +22,6 @@ def load_data():
         st.error("❌ Dataset missing required columns: 'height' or 'weight'.")
         st.stop()
 
-    # Compute BMI and daily calorie deficit
     df["BMI"] = df["weight"] / ((df["height"] / 100) ** 2)
     df["daily_deficit_kcal"] = (2400 - df["calorie_intake"]) + (df["workout_mins"] * 5)
     return df
@@ -164,40 +162,19 @@ with tab4:
 
 st.divider()
 
-# --- Overall Correlation (Altair visualisation) ---
+# --- Overall Correlation ---
 st.subheader("📊 Overall: Calorie Deficit vs Weight Change Correlation")
-
 df["weekly_deficit_kcal"] = df["daily_deficit_kcal"] * 7
-
-# Ensure correct numeric types
-df["weekly_deficit_kcal"] = pd.to_numeric(df["weekly_deficit_kcal"], errors="coerce")
-df["weight_change"] = pd.to_numeric(df["weight_change"], errors="coerce")
-
 corr_df = df.dropna(subset=["weekly_deficit_kcal", "weight_change"])
-
-if not corr_df.empty:
-    corr_value = corr_df["weekly_deficit_kcal"].corr(corr_df["weight_change"])
-
-    scatter = (
-        alt.Chart(corr_df)
-        .mark_circle(size=70, opacity=0.6, color="steelblue")
-        .encode(
-            x=alt.X("weekly_deficit_kcal:Q", title="Weekly Calorie Deficit (kcal)"),
-            y=alt.Y("weight_change:Q", title="Weekly Weight Change (kg)"),
-            tooltip=["user_id:O", "week_no:O", "weekly_deficit_kcal:Q", "weight_change:Q"]
-        )
-    )
-
-    trend = (
-        alt.Chart(corr_df)
-        .transform_regression("weekly_deficit_kcal", "weight_change")
-        .mark_line(color="red", strokeDash=[5, 3])
-    )
-
-    st.altair_chart(scatter + trend, use_container_width=True)
-    st.caption(f"Correlation = {corr_value:.2f} (expected negative: higher deficit → greater weight loss)")
-else:
-    st.warning("No valid data available for correlation plot.")
+st.scatter_chart(
+    corr_df.rename(columns={
+        "weekly_deficit_kcal": "Weekly Deficit (kcal)",
+        "weight_change": "Weekly Weight Δ (kg)"
+    })[["Weekly Deficit (kcal)", "Weekly Weight Δ (kg)"]],
+    height=400
+)
+corr = corr_df["weekly_deficit_kcal"].corr(corr_df["weight_change"])
+st.caption(f"Correlation = {corr:.2f} (expect negative: higher deficit → greater weight loss)")
 
 # --- Export summary ---
 summary_json = {
@@ -209,3 +186,4 @@ summary_json = {
 }
 st.download_button("📥 Download Insights JSON", data=str(summary_json), file_name="summary.json")
 st.download_button("📊 Download CSV Summary", data=df.to_csv(index=False), file_name="patients_summary.csv")
+
