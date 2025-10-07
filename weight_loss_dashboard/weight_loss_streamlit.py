@@ -99,8 +99,36 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # --- TAB 1: BMI & Weight Trend ---
 with tab1:
     st.subheader(f"User {selected_user}: BMI & Weight Trend")
-    st.line_chart(user_data[["week_no", "BMI"]].set_index("week_no"), height=350)
-    st.line_chart(user_data[["week_no", "weight"]].set_index("week_no"), height=350)
+
+    import altair as alt
+
+    # BMI line chart with custom y-axis start
+    bmi_chart = (
+        alt.Chart(user_data)
+        .mark_line(point=True, color="#4C78A8", size=3)
+        .encode(
+            x=alt.X("week_no:O", title="Week Number", axis=alt.Axis(labelAngle=45)),
+            y=alt.Y("BMI:Q", title="BMI", scale=alt.Scale(domain=[15, user_data["BMI"].max() + 2])),
+            tooltip=["week_no", "BMI"]
+        )
+        .properties(height=300)
+    )
+
+    # Weight line chart with custom y-axis start
+    weight_chart = (
+        alt.Chart(user_data)
+        .mark_line(point=True, color="#E45756", size=3)
+        .encode(
+            x=alt.X("week_no:O", title="Week Number", axis=alt.Axis(labelAngle=45)),
+            y=alt.Y("weight:Q", title="Weight (kg)", scale=alt.Scale(domain=[40, user_data["weight"].max() + 2])),
+            tooltip=["week_no", "weight"]
+        )
+        .properties(height=300)
+    )
+
+    st.altair_chart(bmi_chart, use_container_width=True)
+    st.altair_chart(weight_chart, use_container_width=True)
+
     st.caption(f"Total Loss: {user_flag['total_loss']:.1f} kg | Avg Deficit: {user_flag['avg_deficit']:.0f} kcal/day")
 
 # --- TAB 2: Weekly Calorie Deficit & Target Loss ---
